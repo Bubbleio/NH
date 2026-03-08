@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NH RepDex — New Hampshire Representative Cards</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Exo+2:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --rep: #1a472a;
+    --dem: #0d2b6b;
+    --ind: #5a2d82;
+    --gold: #f5c518;
+    --silver: #c0c0c0;
+    --bg: #0a0a14;
+    --card-w: 300px;
+    --cols: 3;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: #eee;
+    font-family: 'Exo 2', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Pixel grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+    background-size: 32px 32px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    text-align: center;
+    padding: 40px 20px 20px;
+    background: linear-gradient(180deg, #0a0a14 0%, transparent 100%);
+  }
+
+  .logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(16px, 4vw, 32px);
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #f5c518, #ff6b35, #f5c518);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(245,197,24,0.4));
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #888;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 30px;
+  }
+
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .stat-pill {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 6px 18px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .stat-pill .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot-r { background: #e53935; box-shadow: 0 0 6px #e53935; }
+  .dot-d { background: #1e88e5; box-shadow: 0 0 6px #1e88e5; }
+  .dot-i { background: #ab47bc; box-shadow: 0 0 6px #ab47bc; }
+
+  /* Controls */
+  .controls {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 20px 28px;
+  }
+
+  .controls input[type="text"] {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #eee;
+    padding: 10px 16px;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 14px;
+    width: 240px;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .controls input[type="text"]::placeholder { color: #555; }
+  .controls input[type="text"]:focus { border-color: var(--gold); }
+
+  .filter-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #aaa;
+    padding: 10px 18px;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .filter-btn:hover { background: rgba(255,255,255,0.12); color: #eee; }
+  .filter-btn.active { color: #fff; }
+  .filter-btn.active.all { border-color: var(--gold); background: rgba(245,197,24,0.12); color: var(--gold); }
+  .filter-btn.active.rep { border-color: #e53935; background: rgba(229,57,53,0.12); color: #ef5350; }
+  .filter-btn.active.dem { border-color: #1e88e5; background: rgba(30,136,229,0.12); color: #42a5f5; }
+
+  /* Grid */
+  #card-grid {
+    position: relative;
+    z-index: 5;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), var(--card-w));
+    gap: 40px;
+    justify-content: center;
+    padding: 0 36px 60px;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 1050px) {
+    :root { --cols: 2; }
+  }
+  @media (max-width: 700px) {
+    :root { --cols: 1; }
+  }
+
+  .col-toggle {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .col-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #888;
+    padding: 8px 14px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    cursor: pointer;
+    transition: all .2s;
+    letter-spacing: .5px;
+  }
+  .col-btn:hover { background: rgba(255,255,255,0.1); color: #ccc; }
+  .col-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(245,197,24,0.1); }
+
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(30px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  /* THE CARD */
+  .rep-card {
+    width: var(--card-w);
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    transition: box-shadow 0.3s ease;
+  }
+
+  .card-scene:not(:has(.flipped)) .card-front.rep-card {
+    cursor: pointer;
+  }
+
+  .card-scene:not(:has(.flipped)):hover .card-front.rep-card {
+    transform: translateY(-6px) scale(1.02) rotate(-0.3deg);
+    transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+  }
+
+  /* Party-based card themes */
+  .rep-card.REP {
+    box-shadow: 0 4px 30px rgba(229,57,53,0.25), 0 0 0 1px rgba(229,57,53,0.3);
+    --party-a: #7b1212;
+    --party-b: #1a0505;
+    --party-c: #e53935;
+    --party-d: #ff6b6b;
+    --type-bg: rgba(229,57,53,0.25);
+  }
+  .rep-card.DEM {
+    box-shadow: 0 4px 30px rgba(30,136,229,0.25), 0 0 0 1px rgba(30,136,229,0.3);
+    --party-a: #0a2752;
+    --party-b: #030d1e;
+    --party-c: #1e88e5;
+    --party-d: #64b5f6;
+    --type-bg: rgba(30,136,229,0.25);
+  }
+  .rep-card.IND {
+    box-shadow: 0 4px 30px rgba(171,71,188,0.25), 0 0 0 1px rgba(171,71,188,0.3);
+    --party-a: #3b1260;
+    --party-b: #0e0520;
+    --party-c: #ab47bc;
+    --party-d: #ce93d8;
+    --type-bg: rgba(171,71,188,0.25);
+  }
+
+  .rep-card:hover {
+    box-shadow: 0 16px 50px color-mix(in srgb, var(--party-c) 40%, transparent), 0 0 0 1.5px var(--party-c);
+  }
+
+  /* Holographic shimmer on hover */
+  .rep-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255,255,255,0.08) 50%,
+      transparent 60%
+    );
+    opacity: 0;
+    transition: opacity .3s, background-position .3s;
+    pointer-events: none;
+    border-radius: 16px;
+  }
+  .rep-card:hover::after { opacity: 1; }
+
+  .card-inner {
+    background: linear-gradient(160deg, var(--party-a), var(--party-b));
+    height: 100%;
+  }
+
+  /* Card Header */
+  .card-header {
+    padding: 14px 14px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .card-name {
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    line-height: 1.3;
+    color: #fff;
+    flex: 1;
+    padding-right: 8px;
+  }
+
+  .card-hp {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: var(--party-d);
+    white-space: nowrap;
+    padding-top: 2px;
+  }
+  .card-hp span {
+    font-size: 12px;
+  }
+
+  /* Avatar area */
+  .card-art {
+    position: relative;
+    margin: 0 14px 10px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
+    border: 1px solid rgba(255,255,255,0.1);
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .card-art .rep-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    display: block;
+  }
+
+  .card-art .photo-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Pixel avatar */
+  .pixel-avatar {
+    width: 90px;
+    height: 90px;
+    position: relative;
+    image-rendering: pixelated;
+  }
+
+  .pixel-avatar canvas {
+    width: 90px;
+    height: 90px;
+    image-rendering: pixelated;
+  }
+
+  .card-art .district-badge {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* Type badges */
+  .type-row {
+    display: flex;
+    gap: 6px;
+    padding: 0 14px 10px;
+    flex-wrap: wrap;
+  }
+
+  .type-badge {
+    background: var(--type-bg);
+    border: 1px solid var(--party-c);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--party-d);
+  }
+
+  .type-badge.county {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.2);
+    color: #bbb;
+  }
+
+  /* Stats */
+  .card-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--party-c), transparent);
+    margin: 0 14px 10px;
+    opacity: 0.4;
+  }
+
+  .card-stats {
+    padding: 0 14px 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .stat-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-label {
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: #666;
+    font-weight: 700;
+  }
+
+  .stat-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .stat-bar {
+    flex: 1;
+    height: 5px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .stat-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--party-c), var(--party-d));
+    transition: width .6s ease;
+  }
+
+  .stat-val {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--party-d);
+    min-width: 20px;
+    text-align: right;
+  }
+
+  /* Move / ability */
+  .card-move {
+    margin: 0 14px 14px;
+    background: rgba(0,0,0,0.25);
+    border-radius: 8px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--party-c);
+  }
+
+  .move-name {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--party-d);
+    margin-bottom: 4px;
+  }
+
+  .move-desc {
+    font-size: 9px;
+    color: #999;
+    line-height: 1.5;
+  }
+
+  /* Footer */
+  .card-footer {
+    padding: 8px 14px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .card-id {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #444;
+  }
+
+  .rarity-stars {
+    color: var(--gold);
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  /* Loading state */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    gap: 20px;
+    transition: opacity .5s ease;
+  }
+
+  .loading-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .pokeball-spin {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    border-top-color: var(--gold);
+    border-right-color: var(--gold);
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--gold);
+    animation: blink 1s ease infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Pagination */
+  .pagination {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 20px 30px;
+    flex-wrap: wrap;
+  }
+
+  .page-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #aaa;
+    padding: 8px 16px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+
+  .page-btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); color: #eee; }
+  .page-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(245,197,24,0.1); }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .page-info {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    color: #555;
+    text-align: center;
+    padding: 0 5px;
+  }
+
+  .no-results {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: #444;
+    text-align: center;
+    padding: 80px 20px;
+    width: 100%;
+  }
+
+  /* ── CARD FLIP ── */
+  .card-scene {
+    width: 100%;
+    max-width: var(--card-w);
+    perspective: 900px;
+    justify-self: center;
+  }
+
+  .card-flipper {
+    position: relative;
+    width: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(.4,0,.2,1);
+  }
+
+  .card-flipper.flipped {
+    transform: rotateY(180deg);
+  }
+
+  .card-face {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .card-face.card-back {
+    position: absolute;
+    top: 0; left: 0; width: 100%;
+    transform: rotateY(180deg);
+    min-height: 100%;
+  }
+
+  /* flip button on the front card */
+  .flip-btn {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    color: var(--party-d);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 9px 0;
+    cursor: pointer;
+    letter-spacing: .5px;
+    transition: background .2s;
+  }
+  .flip-btn:hover { background: rgba(255,255,255,0.06); }
+
+  /* ── BACK OF CARD ── */
+  .back-inner {
+    background: linear-gradient(160deg, var(--party-a, #0a1020), var(--party-b, #030810));
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 14px;
+    min-height: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 4px 30px color-mix(in srgb, var(--party-c, #555) 20%, transparent);
+  }
+
+  .back-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .back-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: var(--party-d, #aaa);
+    letter-spacing: .5px;
+  }
+
+  .back-close {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    color: #888;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 4px 8px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .back-close:hover { color: #fff; background: rgba(255,255,255,0.12); }
+
+  .ai-disclaimer {
+    background: rgba(245,197,24,0.08);
+    border: 1px solid rgba(245,197,24,0.25);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 8px;
+    color: #a89040;
+    line-height: 1.5;
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .vote-list {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    flex: 1;
+  }
+
+  .vote-item {
+    background: rgba(0,0,0,0.25);
+    border-radius: 8px;
+    padding: 8px 10px;
+    border-left: 3px solid var(--vote-color, #555);
+  }
+
+  .vote-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .vote-bill {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    color: #666;
+  }
+
+  .vote-badge {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--vote-color, #555) 20%, transparent);
+    color: var(--vote-color, #888);
+    border: 1px solid var(--vote-color, #555);
+  }
+
+  .vote-desc {
+    font-size: 9px;
+    color: #aaa;
+    line-height: 1.4;
+  }
+
+  .contact-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .contact-icon {
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .contact-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .contact-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    color: #555;
+    margin-bottom: 3px;
+    letter-spacing: .5px;
+  }
+
+  .contact-value {
+    font-size: 9px;
+    color: #aaa;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .contact-value a {
+    color: var(--party-d, #aaa);
+    text-decoration: none;
+  }
+
+  .contact-value a:hover {
+    text-decoration: underline;
+  }
+
+  .contact-na {
+    color: #444;
+    font-style: italic;
+  }
+    display: block;
+    text-align: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: #888;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 9px;
+    text-decoration: none;
+    transition: all .2s;
+    letter-spacing: .3px;
+  }
+  .records-link:hover { background: rgba(255,255,255,0.1); color: #eee; border-color: var(--party-c); }
+
+  /* Loading state for back */
+  .back-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    gap: 14px;
+  }
+
+  .back-loading-spinner {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.07);
+    border-top-color: var(--party-c, #aaa);
+    animation: spin 0.8s linear infinite;
+  }
+
+  .back-loading-text {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    color: #555;
+    animation: blink 1s ease infinite;
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loading">
+  <div class="pokeball-spin"></div>
+  <div class="loading-text">LOADING REPDEX...</div>
+</div>
+
+<header>
+  <div class="logo">✦ NH RepDex ✦</div>
+  <div class="subtitle">New Hampshire State Representatives · 2025–2026 Session</div>
+  <div class="stats-bar">
+    <div class="stat-pill"><span class="dot dot-r"></span><span id="rep-count">—</span> Republican</div>
+    <div class="stat-pill"><span class="dot dot-d"></span><span id="dem-count">—</span> Democrat</div>
+    <div class="stat-pill"><span class="dot dot-i"></span><span id="ind-count">—</span> Independent</div>
+  </div>
+</header>
+
+<div class="controls">
+  <input type="text" id="search" placeholder="Search name, county, district…">
+  <button class="filter-btn active all" data-filter="ALL">All</button>
+  <button class="filter-btn rep" data-filter="REP">Republican</button>
+  <button class="filter-btn dem" data-filter="DEM">Democrat</button>
+  <button class="filter-btn ind" data-filter="IND">Independent</button>
+  <div class="col-toggle">
+    <button class="col-btn" data-cols="2">2 cols</button>
+    <button class="col-btn active" data-cols="3">3 cols</button>
+  </div>
+</div>
+
+<div id="card-grid"></div>
+<div class="pagination" id="pagination"></div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+// NH House Representatives 2025-2026 (400 members)
+// Data: name, party (REP/DEM/IND), county, district
+const REPS = [
+  // BELKNAP COUNTY
+  {n:"Glen Aldrich",p:"REP",c:"Belknap",d:"Dist 2",e:"glen.aldrich@leg.state.nh.us"},
+  {n:"Calvin Beaulier",p:"REP",c:"Belknap",d:"Dist 4",e:null},
+  {n:"Mike Belcher",p:"REP",c:"Belknap",d:"Dist 6",e:"Mike.Belcher@leg.state.nh.us"},
+  {n:"Lisa Freeman",p:"REP",c:"Belknap",d:"Dist 8",e:null},
+  {n:"Joseph Hamblen",p:"REP",c:"Belknap",d:"Dist 5",e:null},
+  {n:"Mike Ouellet",p:"REP",c:"Belknap",d:"Dist 7",e:"Mike.Ouellet@leg.state.nh.us"},
+  {n:"Douglas Trottier",p:"REP",c:"Belknap",d:"Dist 8",e:"douglastrottier1@gmail.com"},
+  {n:"Paul A. Terry",p:"REP",c:"Belknap",d:"Dist 7",e:"Paul.Terry@leg.state.nh.us"},
+  {n:"Peter R. Varney",p:"REP",c:"Belknap",d:"Dist 7",e:"pvarney@atsnh.com"},
+  // CARROLL COUNTY
+  {n:"Tom Buco",p:"DEM",c:"Carroll",d:"Dist 1",e:"Tom.Buco@leg.state.nh.us"},
+  {n:"David Paige",p:"DEM",c:"Carroll",d:"Dist 1",e:"David.Paige@leg.state.nh.us"},
+  {n:"Stephen Woodcock",p:"DEM",c:"Carroll",d:"Dist 1",e:"stevewoodcock.rep@gmail.com"},
+  {n:"Anita Burroughs",p:"DEM",c:"Carroll",d:"Dist 2",e:"Anita.Burroughs@leg.state.nh.us"},
+  {n:"Chris McAleer",p:"DEM",c:"Carroll",d:"Dist 2",e:"Chris.McAleer@leg.state.nh.us"},
+  {n:"Mark Paige",p:"REP",c:"Carroll",d:"Dist 3",e:"mark.paige@leg.state.nh.us"},
+  {n:"William Palmer",p:"REP",c:"Carroll",d:"Dist 3",e:null},
+  {n:"James Creighton",p:"REP",c:"Carroll",d:"Dist 4",e:"creighton4nh@gmail.com"},
+  {n:"Michael Moffett",p:"REP",c:"Carroll",d:"Dist 4",e:"michael.moffett@leg.state.nh.us"},
+  // CHESHIRE COUNTY
+  {n:"Paul Berch",p:"DEM",c:"Cheshire",d:"Dist 1",e:null},
+  {n:"Merryl Gibbs",p:"DEM",c:"Cheshire",d:"Dist 1",e:"Merryl.Gibbs@leg.state.nh.us"},
+  {n:"Margaret Drye",p:"DEM",c:"Cheshire",d:"Dist 2",e:null},
+  {n:"Sue Newman",p:"DEM",c:"Cheshire",d:"Dist 2",e:"sue.newman@leg.state.nh.us"},
+  {n:"Karen Ebel",p:"DEM",c:"Cheshire",d:"Dist 3",e:"Karen.Ebel@leg.state.nh.us"},
+  {n:"Suzanne Chretien",p:"DEM",c:"Cheshire",d:"Dist 3",e:"Jackie.Chretien@leg.state.nh.us"},
+  {n:"Kate Murray",p:"DEM",c:"Cheshire",d:"Dist 4",e:"Kate.Murray@leg.state.nh.us"},
+  {n:"Linda McGrath",p:"DEM",c:"Cheshire",d:"Dist 4",e:null},
+  {n:"Kathleen Paquette",p:"REP",c:"Cheshire",d:"Dist 5",e:null},
+  {n:"Tim Mannion",p:"DEM",c:"Cheshire",d:"Dist 5",e:null},
+  {n:"Thomas Mannion",p:"DEM",c:"Cheshire",d:"Dist 6",e:"Tom.Mannion@leg.state.nh.us"},
+  {n:"Gary Daniels",p:"REP",c:"Cheshire",d:"Dist 6",e:null},
+  {n:"Barry Faulkner",p:"REP",c:"Cheshire",d:"Dist 7",e:"fbfaulkner@outlook.com"},
+  {n:"Jim Maggiore",p:"DEM",c:"Cheshire",d:"Dist 7",e:"Jim.Maggiore@leg.state.nh.us"},
+  {n:"Matthew Hicks",p:"REP",c:"Cheshire",d:"Dist 8",e:"Matthew.Hicks@leg.state.nh.us"},
+  {n:"Sly Karasinski",p:"DEM",c:"Cheshire",d:"Dist 8",e:null},
+  // COOS COUNTY
+  {n:"Lino Avellani",p:"REP",c:"Coos",d:"Dist 1",e:"lino.avellani@leg.state.nh.us"},
+  {n:"Wayne Hemingway",p:"DEM",c:"Coos",d:"Dist 1",e:null},
+  {n:"Wayne Burton",p:"REP",c:"Coos",d:"Dist 2",e:null},
+  {n:"Muriel Hall",p:"DEM",c:"Coos",d:"Dist 2",e:"Muriel.Hall@leg.state.nh.us"},
+  {n:"Allan Howland",p:"REP",c:"Coos",d:"Dist 3",e:"Allan.Howland@leg.state.nh.us"},
+  {n:"Lori Korzen",p:"DEM",c:"Coos",d:"Dist 3",e:null},
+  {n:"Megan Murray",p:"DEM",c:"Coos",d:"Dist 4",e:"Megan.Murray@leg.state.nh.us"},
+  {n:"Matthew Coker",p:"REP",c:"Coos",d:"Dist 4",e:"Matthew.Coker@leg.state.nh.us"},
+  // GRAFTON COUNTY
+  {n:"Susan Almy",p:"DEM",c:"Grafton",d:"Dist 1",e:"susan.almy@comcast.net"},
+  {n:"Peter Bixby",p:"DEM",c:"Grafton",d:"Dist 1",e:"Peter.Bixby@leg.state.nh.us"},
+  {n:"Peter Leishman",p:"DEM",c:"Grafton",d:"Dist 1",e:"prleishman@aol.com"},
+  {n:"Dennis Malloy",p:"REP",c:"Grafton",d:"Dist 2",e:"dennis.malloy@leg.state.nh.us"},
+  {n:"Molly Howard",p:"DEM",c:"Grafton",d:"Dist 2",e:"Molly.Howard@leg.state.nh.us"},
+  {n:"Thomas Cormen",p:"DEM",c:"Grafton",d:"Dist 3",e:"Thomas.Cormen@leg.state.nh.us"},
+  {n:"Hope Damon",p:"DEM",c:"Grafton",d:"Dist 3",e:null},
+  {n:"David Luneau",p:"DEM",c:"Grafton",d:"Dist 4",e:"dluneauNH@gmail.com"},
+  {n:"Cassandra Levesque",p:"DEM",c:"Grafton",d:"Dist 4",e:"Cassandra.Levesque@leg.state.nh.us"},
+  {n:"Russell Muirhead",p:"DEM",c:"Grafton",d:"Dist 5",e:"Russell.Muirhead@leg.state.nh.us"},
+  {n:"Linda Haskins",p:"DEM",c:"Grafton",d:"Dist 5",e:"Linda.Haskins@leg.state.nh.us"},
+  {n:"Connie Lane",p:"DEM",c:"Grafton",d:"Dist 6",e:"Connie.Lane@leg.state.nh.us"},
+  {n:"Ellen Read",p:"DEM",c:"Grafton",d:"Dist 6",e:null},
+  {n:"David Preece",p:"REP",c:"Grafton",d:"Dist 7",e:"David.Preece@leg.state.nh.us"},
+  {n:"Richard Lascelles",p:"REP",c:"Grafton",d:"Dist 7",e:"rlascelleshome@prodigy.net"},
+  {n:"Gary Gilmore",p:"REP",c:"Grafton",d:"Dist 8",e:null},
+  {n:"Cyril Aures",p:"REP",c:"Grafton",d:"Dist 8",e:"Cyril.Aures@leg.state.nh.us"},
+  {n:"Samuel Farrington",p:"REP",c:"Grafton",d:"Dist 9",e:null},
+  {n:"Linda Franz",p:"DEM",c:"Grafton",d:"Dist 9",e:null},
+  {n:"Steve Bogert",p:"REP",c:"Grafton",d:"Dist 10",e:"Steven.Bogert@leg.state.nh.us"},
+  // HILLSBOROUGH COUNTY
+  {n:"Joe Alexander",p:"REP",c:"Hillsborough",d:"Dist 1",e:"Joe.Alexander@leg.state.nh.us"},
+  {n:"Peggy Balboni",p:"REP",c:"Hillsborough",d:"Dist 1",e:"Peggy.Balboni@leg.state.nh.us"},
+  {n:"Lorie Ball",p:"REP",c:"Hillsborough",d:"Dist 2",e:"Lorie.Ball@leg.state.nh.us"},
+  {n:"Heather Baldwin",p:"REP",c:"Hillsborough",d:"Dist 2",e:"Heather.Baldwin@leg.state.nh.us"},
+  {n:"Nick Bridle",p:"REP",c:"Hillsborough",d:"Dist 3",e:null},
+  {n:"Pam Brown",p:"DEM",c:"Hillsborough",d:"Dist 3",e:null},
+  {n:"James Gruber",p:"REP",c:"Hillsborough",d:"Dist 4",e:null},
+  {n:"Michael Cahill",p:"REP",c:"Hillsborough",d:"Dist 4",e:"Michael.Cahill@leg.state.nh.us"},
+  {n:"Tony Caplan",p:"DEM",c:"Hillsborough",d:"Dist 5",e:"Tony.Caplan@leg.state.nh.us"},
+  {n:"Jose Cambrils",p:"DEM",c:"Hillsborough",d:"Dist 5",e:"Jose4NH@comcast.net"},
+  {n:"Linda DiSilvestro",p:"DEM",c:"Hillsborough",d:"Dist 6",e:"Linda.Disilvestro@leg.state.nh.us"},
+  {n:"Jean Jeudy",p:"DEM",c:"Hillsborough",d:"Dist 6",e:"jean.jeudy@leg.state.nh.us"},
+  {n:"Keith Ammon",p:"REP",c:"Hillsborough",d:"Dist 7",e:"Keith.Ammon@leg.state.nh.us"},
+  {n:"Travis Corcoran",p:"REP",c:"Hillsborough",d:"Dist 7",e:"tjic2020@gmail.com"},
+  {n:"Susan DeRoy",p:"DEM",c:"Hillsborough",d:"Dist 8",e:null},
+  {n:"Ross Berry",p:"REP",c:"Hillsborough",d:"Dist 8",e:null},
+  {n:"Ronald Dunn",p:"REP",c:"Hillsborough",d:"Dist 9",e:"Ron.Dunn@leg.state.nh.us"},
+  {n:"Jim Fedolfi",p:"REP",c:"Hillsborough",d:"Dist 9",e:"jfedolfi@comcast.net"},
+  {n:"Mary Ford",p:"DEM",c:"Hillsborough",d:"Dist 10",e:null},
+  {n:"Michael Granger",p:"REP",c:"Hillsborough",d:"Dist 10",e:"Michael.Granger@leg.state.nh.us"},
+  {n:"Mary Hakken-Phillips",p:"DEM",c:"Hillsborough",d:"Dist 11",e:"Mary.HakkenPhillips@leg.state.nh.us"},
+  {n:"Stephanie Payeur",p:"REP",c:"Hillsborough",d:"Dist 11",e:"Stephanie.Payeur@leg.state.nh.us"},
+  {n:"Luz Bay",p:"DEM",c:"Hillsborough",d:"Dist 12",e:"Luz.Bay@leg.state.nh.us"},
+  {n:"Manoj Chourasia",p:"DEM",c:"Hillsborough",d:"Dist 12",e:null},
+  {n:"Aboul Khan",p:"REP",c:"Hillsborough",d:"Dist 13",e:"Aboul.Khan@leg.state.nh.us"},
+  {n:"Ted Gorski",p:"REP",c:"Hillsborough",d:"Dist 13",e:"ted.gorski@leg.state.nh.us"},
+  {n:"Juliet Harvey-Bolia",p:"REP",c:"Hillsborough",d:"Dist 14",e:"Juliet.HarveyBolia@leg.state.nh.us"},
+  {n:"Patricia Cornell",p:"DEM",c:"Hillsborough",d:"Dist 14",e:"patricia.cornell@leg.state.nh.us"},
+  {n:"Tanya Donnelly",p:"DEM",c:"Hillsborough",d:"Dist 15",e:"Tanya.Donnelly@leg.state.nh.us"},
+  {n:"Cathryn Harvey",p:"REP",c:"Hillsborough",d:"Dist 15",e:"Cathryn.Harvey@leg.state.nh.us"},
+  {n:"Gaby Grossman",p:"DEM",c:"Hillsborough",d:"Dist 16",e:"Gaby.Grossman@leg.state.nh.us"},
+  {n:"Jaci Grote",p:"DEM",c:"Hillsborough",d:"Dist 16",e:"Jaci.Grote@leg.state.nh.us"},
+  {n:"Samantha Jacobs",p:"DEM",c:"Hillsborough",d:"Dist 17",e:null},
+  {n:"Brian Nadeau",p:"DEM",c:"Hillsborough",d:"Dist 17",e:null},
+  {n:"Philip Jones",p:"DEM",c:"Hillsborough",d:"Dist 18",e:"Philip.Jones@leg.state.nh.us"},
+  {n:"Erin Kerwin",p:"DEM",c:"Hillsborough",d:"Dist 18",e:null},
+  {n:"Jennifer Mandelbaum",p:"DEM",c:"Hillsborough",d:"Dist 19",e:"JenForNH@gmail.com",w:"jenfornh.com"},
+  {n:"Zoe Manos",p:"DEM",c:"Hillsborough",d:"Dist 19",e:"zoe.manos@leg.state.nh.us"},
+  {n:"Alissandra Murray",p:"DEM",c:"Hillsborough",d:"Dist 20",e:"Alissandra.Murray@leg.state.nh.us"},
+  {n:"Kristine Perez",p:"DEM",c:"Hillsborough",d:"Dist 20",e:"Kristine.Perez@leg.state.nh.us"},
+  {n:"Daniel Popovici-Muller",p:"REP",c:"Hillsborough",d:"Dist 21",e:"Daniel.PopoviciMuller@leg.state.nh.us"},
+  {n:"Susan Porcelli",p:"DEM",c:"Hillsborough",d:"Dist 21",e:"Susan.Porcelli@leg.state.nh.us"},
+  {n:"Charles Melvin",p:"REP",c:"Hillsborough",d:"Dist 22",e:"Charlie.Melvin@leg.state.nh.us"},
+  {n:"Sherman Packard",p:"REP",c:"Hillsborough",d:"Dist 22",e:"sherman.packard@leg.state.nh.us"},
+  {n:"Ernesto Gonzalez",p:"DEM",c:"Hillsborough",d:"Dist 23",e:null},
+  {n:"Linda Harriott-Gathright",p:"DEM",c:"Hillsborough",d:"Dist 23",e:"linda.harriottgathright@leg.state.nh.us"},
+  {n:"Pierre Dupont",p:"REP",c:"Hillsborough",d:"Dist 24",e:null},
+  {n:"Michael Harrington",p:"REP",c:"Hillsborough",d:"Dist 24",e:null},
+  {n:"Richard Brown",p:"REP",c:"Hillsborough",d:"Dist 25",e:"Richard.Brown@leg.state.nh.us"},
+  {n:"Debra DeSimone",p:"REP",c:"Hillsborough",d:"Dist 25",e:"debra.desimone@leg.state.nh.us"},
+  {n:"David Love",p:"REP",c:"Hillsborough",d:"Dist 26",e:"David.Love@leg.state.nh.us"},
+  {n:"John Cloutier",p:"DEM",c:"Hillsborough",d:"Dist 26",e:null},
+  {n:"Liz Barbour",p:"REP",c:"Hillsborough",d:"Dist 27",e:null},
+  {n:"Glen Bailey",p:"REP",c:"Hillsborough",d:"Dist 27",e:"grbailey@metrocast.net"},
+  {n:"Karen Hegner",p:"DEM",c:"Hillsborough",d:"Dist 28",e:null},
+  {n:"Christopher Herbert",p:"DEM",c:"Hillsborough",d:"Dist 28",e:"Chris.Herbert@leg.state.nh.us"},
+  {n:"Diane Kelley",p:"REP",c:"Hillsborough",d:"Dist 29",e:"Diane.Kelley@leg.state.nh.us"},
+  {n:"Steven Kesselring",p:"REP",c:"Hillsborough",d:"Dist 29",e:null},
+  {n:"Lee Ann Kluger",p:"DEM",c:"Hillsborough",d:"Dist 30",e:null},
+  {n:"Allison Knab",p:"DEM",c:"Hillsborough",d:"Dist 30",e:"Allison.Knab@leg.state.nh.us"},
+  {n:"Brian Labrie",p:"REP",c:"Hillsborough",d:"Dist 31",e:null},
+  {n:"Dillon Dumont",p:"REP",c:"Hillsborough",d:"Dist 31",e:null},
+  {n:"Bill Bolton",p:"REP",c:"Hillsborough",d:"Dist 32",e:"Bill.Bolton@leg.state.nh.us"},
+  {n:"Mike Bordes",p:"REP",c:"Hillsborough",d:"Dist 32",e:"mike.bordes@leg.state.nh.us"},
+  {n:"Billie Butler",p:"DEM",c:"Hillsborough",d:"Dist 33",e:null},
+  {n:"Denise DeDe-Poulin",p:"DEM",c:"Hillsborough",d:"Dist 33",e:null},
+  {n:"Seth Miller",p:"DEM",c:"Hillsborough",d:"Dist 34",e:null},
+  {n:"Tom Dolan",p:"REP",c:"Hillsborough",d:"Dist 34",e:"Tom.Dolan@leg.state.nh.us"},
+  {n:"Maureen Mooney",p:"REP",c:"Hillsborough",d:"Dist 35",e:"maureen.mooney@leg.state.nh.us"},
+  {n:"Robley Hall",p:"REP",c:"Hillsborough",d:"Dist 35",e:null},
+  {n:"Katy Peternel",p:"DEM",c:"Hillsborough",d:"Dist 36",e:"Katy.Peternel@leg.state.nh.us"},
+  {n:"Michael Murphy",p:"REP",c:"Hillsborough",d:"Dist 36",e:"michael.murphy@leg.state.nh.us"},
+  {n:"Susan Elberger",p:"DEM",c:"Hillsborough",d:"Dist 37",e:"Susan.Elberger@leg.state.nh.us"},
+  {n:"Linda Gould",p:"REP",c:"Hillsborough",d:"Dist 37",e:"linda.gould@leg.state.nh.us"},
+  {n:"Erica de Vries",p:"DEM",c:"Hillsborough",d:"Dist 38",e:null},
+  {n:"Henry Giasson",p:"REP",c:"Hillsborough",d:"Dist 38",e:null},
+  {n:"Lily Foss",p:"DEM",c:"Hillsborough",d:"Dist 39",e:null},
+  {n:"Nicole Leapley",p:"DEM",c:"Hillsborough",d:"Dist 39",e:"Nicole.Leapley@leg.state.nh.us"},
+  {n:"James Guzofski",p:"REP",c:"Hillsborough",d:"Dist 40",e:null},
+  {n:"Margaret Hakken-Phillips",p:"DEM",c:"Hillsborough",d:"Dist 40",e:"Mary.HakkenPhillips@leg.state.nh.us"},
+  // MERRIMACK COUNTY
+  {n:"Dick Ames",p:"DEM",c:"Merrimack",d:"Dist 1",e:"amesinjaffrey@gmail.com"},
+  {n:"JD Bernardy",p:"DEM",c:"Merrimack",d:"Dist 1",e:"jd.bernardy@comcast.net"},
+  {n:"Dan Bergeron",p:"REP",c:"Merrimack",d:"Dist 2",e:null},
+  {n:"Ralph Boehm",p:"REP",c:"Merrimack",d:"Dist 2",e:"rgboehm@comcast.net"},
+  {n:"Claudine Burnham",p:"REP",c:"Merrimack",d:"Dist 3",e:"Claudine.Burnham@leg.state.nh.us"},
+  {n:"Tracy Bricchi",p:"REP",c:"Merrimack",d:"Dist 3",e:null},
+  {n:"Scott Bryer",p:"DEM",c:"Merrimack",d:"Dist 4",e:null},
+  {n:"William Dolan",p:"REP",c:"Merrimack",d:"Dist 4",e:"William.Dolan@leg.state.nh.us"},
+  {n:"Suraj Budathoki",p:"DEM",c:"Merrimack",d:"Dist 5",e:null},
+  {n:"Tim Hartnett",p:"DEM",c:"Merrimack",d:"Dist 5",e:null},
+  {n:"Arnold Davis",p:"REP",c:"Merrimack",d:"Dist 6",e:"Arnold.Davis@leg.state.nh.us"},
+  {n:"David Fracht",p:"DEM",c:"Merrimack",d:"Dist 7",e:"David.fracht@leg.state.nh.us"},
+  {n:"Myles England",p:"REP",c:"Merrimack",d:"Dist 7",e:null},
+  {n:"Jack Flanagan",p:"REP",c:"Merrimack",d:"Dist 8",e:null},
+  {n:"Larry Gagne",p:"REP",c:"Merrimack",d:"Dist 8",e:"lgagne25@comcast.net"},
+  {n:"Eric Gallager",p:"REP",c:"Merrimack",d:"Dist 9",e:"eric.gallager@leg.state.nh.us"},
+  {n:"Mary Georges",p:"DEM",c:"Merrimack",d:"Dist 9",e:null},
+  {n:"Heath Howard",p:"REP",c:"Merrimack",d:"Dist 10",e:"Heath.Howard@leg.state.nh.us"},
+  {n:"Alicia Gregg",p:"REP",c:"Merrimack",d:"Dist 10",e:"Alicia.Gregg@leg.state.nh.us"},
+  {n:"John Hunt",p:"REP",c:"Merrimack",d:"Dist 11",e:"jbhunt@prodigy.net"},
+  {n:"Gerald Griffin",p:"REP",c:"Merrimack",d:"Dist 11",e:"Gerald.Griffin@leg.state.nh.us"},
+  {n:"Martin Jack",p:"REP",c:"Merrimack",d:"Dist 12",e:"Martin.Jack@leg.state.nh.us"},
+  {n:"John Janigian",p:"REP",c:"Merrimack",d:"Dist 12",e:"John.Janigian@leg.state.nh.us"},
+  {n:"Rick Ladd",p:"REP",c:"Merrimack",d:"Dist 13",e:"rick.ladd@leg.state.nh.us"},
+  {n:"John Larochelle",p:"REP",c:"Merrimack",d:"Dist 13",e:null},
+  {n:"Brian Cole",p:"REP",c:"Merrimack",d:"Dist 14",e:"Brian.Cole@leg.state.nh.us"},
+  {n:"Eleana Colby",p:"DEM",c:"Merrimack",d:"Dist 14",e:null},
+  {n:"James MacKay",p:"DEM",c:"Merrimack",d:"Dist 15",e:"james.mackay@mygait.com"},
+  {n:"Mark MacKenzie",p:"DEM",c:"Merrimack",d:"Dist 15",e:"Mark.MacKenzie@leg.state.nh.us"},
+  {n:"Sanjeev Manohar",p:"REP",c:"Merrimack",d:"Dist 16",e:null},
+  {n:"Jay Markell",p:"DEM",c:"Merrimack",d:"Dist 16",e:null},
+  {n:"Lisa Mazur",p:"DEM",c:"Merrimack",d:"Dist 17",e:"Lisa.Mazur@leg.state.nh.us"},
+  {n:"Bryan Morse",p:"REP",c:"Merrimack",d:"Dist 17",e:null},
+  {n:"Jodi Nelson",p:"REP",c:"Merrimack",d:"Dist 18",e:"jodi.nelson@leg.state.nh.us"},
+  {n:"Ray Newman",p:"REP",c:"Merrimack",d:"Dist 18",e:"Ray.Newman@leg.state.nh.us"},
+  {n:"Kristin Noble",p:"DEM",c:"Merrimack",d:"Dist 19",e:"Kristin.Noble@leg.state.nh.us"},
+  {n:"Jeanine Notter",p:"REP",c:"Merrimack",d:"Dist 19",e:"jeanine.notter@leg.state.nh.us"},
+  {n:"Terri O'Rorke",p:"DEM",c:"Merrimack",d:"Dist 20",e:null},
+  {n:"Bill Ohm",p:"REP",c:"Merrimack",d:"Dist 20",e:null},
+  {n:"Thomas Oppel",p:"REP",c:"Merrimack",d:"Dist 21",e:null},
+  {n:"William Palmer",p:"REP",c:"Merrimack",d:"Dist 21",e:null},
+  {n:"Lucius Parshall",p:"DEM",c:"Merrimack",d:"Dist 22",e:"Lucius.Parshall@leg.state.nh.us"},
+  {n:"Raymond Plante",p:"REP",c:"Merrimack",d:"Dist 22",e:null},
+  {n:"Lisa Post",p:"DEM",c:"Merrimack",d:"Dist 23",e:"Lisacmpost@gmail.com"},
+  {n:"Kelley Potenza",p:"DEM",c:"Merrimack",d:"Dist 23",e:"Kelley.Potenza@leg.state.nh.us"},
+  {n:"John Potucek",p:"REP",c:"Merrimack",d:"Dist 24",e:"John.Potucek@leg.state.nh.us"},
+  {n:"Heather Raymond",p:"DEM",c:"Merrimack",d:"Dist 24",e:"Heather.Raymond@leg.state.nh.us"},
+  {n:"Beth Richards",p:"DEM",c:"Merrimack",d:"Dist 25",e:"bethrichardsforward3@gmail.com"},
+  {n:"Jennifer Rhodes",p:"REP",c:"Merrimack",d:"Dist 25",e:"Jennifer.Rhodes@leg.state.nh.us"},
+  {n:"Rosemarie Rung",p:"DEM",c:"Merrimack",d:"Dist 26",e:"Rosemarie.Rung@leg.state.nh.us"},
+  {n:"Linda Ryan",p:"DEM",c:"Merrimack",d:"Dist 26",e:"Linda.Ryan@leg.state.nh.us"},
+  // ROCKINGHAM COUNTY
+  {n:"Louise Andrus",p:"REP",c:"Rockingham",d:"Dist 1",e:"Louise.Andrus@leg.state.nh.us"},
+  {n:"Aidan Ankarberg",p:"REP",c:"Rockingham",d:"Dist 1",e:"Aidan.Ankarberg@leg.state.nh.us"},
+  {n:"Judy Aron",p:"REP",c:"Rockingham",d:"Dist 2",e:null},
+  {n:"Michael Aron",p:"REP",c:"Rockingham",d:"Dist 2",e:null},
+  {n:"Deborah Aylward",p:"REP",c:"Rockingham",d:"Dist 3",e:"Deborah.Aylward@leg.state.nh.us"},
+  {n:"Paige Beauchemin",p:"REP",c:"Rockingham",d:"Dist 3",e:"paige.beauchemin@leg.state.nh.us"},
+  {n:"Cindy Bennett",p:"REP",c:"Rockingham",d:"Dist 4",e:null},
+  {n:"Stephen Boyd",p:"REP",c:"Rockingham",d:"Dist 4",e:"seboyd2020@gmail.com"},
+  {n:"Bill Boyd",p:"REP",c:"Rockingham",d:"Dist 5",e:"Bill.Boyd@leg.state.nh.us"},
+  {n:"Barbara Comtois",p:"REP",c:"Rockingham",d:"Dist 5",e:"Barbara.Comtois@leg.state.nh.us"},
+  {n:"Karel Crawford",p:"REP",c:"Rockingham",d:"Dist 6",e:"karel.crawford@leg.state.nh.us"},
+  {n:"Paul Dargie",p:"REP",c:"Rockingham",d:"Dist 6",e:null},
+  {n:"Will Darby",p:"DEM",c:"Rockingham",d:"Dist 7",e:"Will.Darby@leg.state.nh.us"},
+  {n:"Fred Davis",p:"REP",c:"Rockingham",d:"Dist 7",e:"Fred.Davis@leg.state.nh.us"},
+  {n:"Susan DeLemus",p:"REP",c:"Rockingham",d:"Dist 8",e:null},
+  {n:"Sayra DeVito",p:"DEM",c:"Rockingham",d:"Dist 8",e:null},
+  {n:"Ricky Devoid",p:"REP",c:"Rockingham",d:"Dist 9",e:null},
+  {n:"Mike Drago",p:"REP",c:"Rockingham",d:"Dist 9",e:"Mike.Drago@leg.state.nh.us"},
+  {n:"Matt Drew",p:"REP",c:"Rockingham",d:"Dist 10",e:null},
+  {n:"Russell Dumais",p:"REP",c:"Rockingham",d:"Dist 10",e:"Russell.Dumais@leg.state.nh.us"},
+  {n:"Sean Durkin",p:"REP",c:"Rockingham",d:"Dist 11",e:"seandurkin4NH@gmail.com"},
+  {n:"Michael Edgar",p:"REP",c:"Rockingham",d:"Dist 11",e:"Michael.Edgar@leg.state.nh.us"},
+  {n:"Jess Edwards",p:"REP",c:"Rockingham",d:"Dist 12",e:"jess.edwards@leg.state.nh.us"},
+  {n:"Sallie Fellows",p:"DEM",c:"Rockingham",d:"Dist 12",e:"Sallie.Fellows@leg.state.nh.us"},
+  {n:"Charles Foote",p:"REP",c:"Rockingham",d:"Dist 13",e:"Charles.Foote@leg.state.nh.us"},
+  {n:"Dru Fox",p:"DEM",c:"Rockingham",d:"Dist 13",e:"Dru.Fox@leg.state.nh.us"},
+  {n:"Loren Foxx",p:"REP",c:"Rockingham",d:"Dist 14",e:"Loren.Foxx@leg.state.nh.us"},
+  {n:"Nicholas Germana",p:"REP",c:"Rockingham",d:"Dist 15",e:"Nicholas.Germana@leg.state.nh.us"},
+  {n:"Julie Gilman",p:"DEM",c:"Rockingham",d:"Dist 15",e:"Julie.Gilman@leg.state.nh.us"},
+  {n:"Dale Girard",p:"REP",c:"Rockingham",d:"Dist 16",e:null},
+  {n:"Joseph Guthrie",p:"REP",c:"Rockingham",d:"Dist 17",e:"lojogut@gmail.com"},
+  {n:"Robert Harb",p:"REP",c:"Rockingham",d:"Dist 17",e:"Robert.Harb@leg.state.nh.us"},
+  {n:"Gregory Hill",p:"REP",c:"Rockingham",d:"Dist 18",e:"greghillnh@gmail.com"},
+  {n:"Timothy Horrigan",p:"DEM",c:"Rockingham",d:"Dist 18",e:"Timothy.Horrigan@leg.state.nh.us"},
+  {n:"Thomas Kaczynski",p:"REP",c:"Rockingham",d:"Dist 19",e:"thomas.kaczynski@leg.state.nh.us"},
+  {n:"Phyllis Katsakiores",p:"REP",c:"Rockingham",d:"Dist 19",e:"pkatsakiores@comcast.net"},
+  {n:"Eileen Kelly",p:"REP",c:"Rockingham",d:"Dist 20",e:null},
+  {n:"Catherine Kenny",p:"DEM",c:"Rockingham",d:"Dist 20",e:"Cathy.Kenny@leg.state.nh.us"},
+  {n:"Jim Kofalt",p:"REP",c:"Rockingham",d:"Dist 21",e:"Jim.Kofalt@leg.state.nh.us"},
+  {n:"Katelyn Kuttab",p:"DEM",c:"Rockingham",d:"Dist 21",e:"Katelyn.Kuttab@leg.state.nh.us"},
+  {n:"Jessica LaMontagne",p:"DEM",c:"Rockingham",d:"Dist 22",e:"Jessica.Lamontagne@leg.state.nh.us"},
+  {n:"John Leavitt",p:"REP",c:"Rockingham",d:"Dist 22",e:"John.Leavitt@leg.state.nh.us"},
+  {n:"Daniel LeClerc",p:"REP",c:"Rockingham",d:"Dist 23",e:"Daniel.LeClerc@leg.state.nh.us"},
+  {n:"Melissa Litchfield",p:"REP",c:"Rockingham",d:"Dist 23",e:null},
+  {n:"Christal Lloyd",p:"DEM",c:"Rockingham",d:"Dist 24",e:"Christal.Lloyd@leg.state.nh.us"},
+  {n:"Patrick Long",p:"REP",c:"Rockingham",d:"Dist 24",e:"long55@comcast.net"},
+  {n:"Darrell Louis",p:"REP",c:"Rockingham",d:"Dist 25",e:null},
+  {n:"Peter Lovett",p:"REP",c:"Rockingham",d:"Dist 25",e:"Peter.Lovett@leg.state.nh.us"},
+  {n:"Janet Lucas",p:"DEM",c:"Rockingham",d:"Dist 26",e:null},
+  {n:"David Lundgren",p:"REP",c:"Rockingham",d:"Dist 26",e:null},
+  {n:"Bob Lynn",p:"REP",c:"Rockingham",d:"Dist 27",e:"rjlynn4@gmail.com"},
+  {n:"John MacDonald",p:"REP",c:"Rockingham",d:"Dist 27",e:"John.MacDonald@leg.state.nh.us"},
+  {n:"Wayne MacDonald",p:"REP",c:"Rockingham",d:"Dist 28",e:null},
+  {n:"Amy Malone",p:"REP",c:"Rockingham",d:"Dist 28",e:null},
+  {n:"Dennis Mannion",p:"REP",c:"Rockingham",d:"Dist 29",e:"Dennis.Mannion@leg.state.nh.us"},
+  {n:"Valerie McDonnell",p:"REP",c:"Rockingham",d:"Dist 29",e:"Valerie.McDonnell@leg.state.nh.us"},
+  {n:"Donald McFarlane",p:"REP",c:"Rockingham",d:"Dist 30",e:null},
+  {n:"Kat McGhee",p:"DEM",c:"Rockingham",d:"Dist 30",e:"Kat.McGhee@leg.state.nh.us"},
+  {n:"Carol McGuire",p:"REP",c:"Rockingham",d:"Dist 31",e:"carol@mcguire4house.com"},
+  {n:"Dan McGuire",p:"REP",c:"Rockingham",d:"Dist 31",e:"Dan.McGuire@leg.state.nh.us"},
+  {n:"Mark McLean",p:"REP",c:"Rockingham",d:"Dist 32",e:"mark.mclean@leg.state.nh.us"},
+  {n:"Charles McMahon",p:"REP",c:"Rockingham",d:"Dist 32",e:"cmcmahon55@gmail.com"},
+  {n:"Peter Mehegan",p:"REP",c:"Rockingham",d:"Dist 33",e:null},
+  {n:"David Meuse",p:"DEM",c:"Rockingham",d:"Dist 33",e:"David.Meuse@leg.state.nh.us",w:"davidmeuse4nh.com"},
+  {n:"Julie Miles",p:"DEM",c:"Rockingham",d:"Dist 34",e:null},
+  {n:"David Milz",p:"REP",c:"Rockingham",d:"Dist 34",e:"david.milz@leg.state.nh.us"},
+  {n:"Laurence Miner",p:"REP",c:"Rockingham",d:"Dist 35",e:null},
+  {n:"Sheri Minor",p:"REP",c:"Rockingham",d:"Dist 35",e:null},
+  {n:"Pete Morency",p:"REP",c:"Rockingham",d:"Dist 36",e:null},
+  {n:"Jonathan Morton",p:"REP",c:"Rockingham",d:"Dist 36",e:null},
+  {n:"Chris Muns",p:"DEM",c:"Rockingham",d:"Dist 37",e:"Chris.Muns@leg.state.nh.us"},
+  {n:"Denis Murphy",p:"DEM",c:"Rockingham",d:"Dist 37",e:null},
+  {n:"Mary Murphy",p:"DEM",c:"Rockingham",d:"Dist 38",e:null},
+  {n:"Nancy Murphy",p:"DEM",c:"Rockingham",d:"Dist 38",e:"Nancy.Murphy@leg.state.nh.us"},
+  {n:"David Nagel",p:"REP",c:"Rockingham",d:"Dist 39",e:"davidnagelmd@gmail.com"},
+  {n:"Rich Nalevanko",p:"REP",c:"Rockingham",d:"Dist 39",e:null},
+  {n:"Jodi Newell",p:"DEM",c:"Rockingham",d:"Dist 40",e:"Jodi.Newell@leg.state.nh.us"},
+  {n:"James Newsom",p:"REP",c:"Rockingham",d:"Dist 40",e:null},
+  {n:"Thomas Ploszaj",p:"REP",c:"Rockingham",d:"Dist 41",e:"tom.ploszaj@leg.state.nh.us"},
+  {n:"Yury Polozov",p:"REP",c:"Rockingham",d:"Dist 41",e:"Yury.Polozov@leg.state.nh.us"},
+  {n:"Sherri Reinfurt",p:"REP",c:"Rockingham",d:"Dist 42",e:null},
+  {n:"Skip Rollins",p:"REP",c:"Rockingham",d:"Dist 42",e:null},
+  {n:"James Roesener",p:"DEM",c:"Rockingham",d:"Dist 43",e:"James.Roesener@leg.state.nh.us"},
+  {n:"Catherine Rombeau",p:"DEM",c:"Rockingham",d:"Dist 43",e:"Catherine.Rombeau@leg.state.nh.us"},
+  {n:"Terry Roy",p:"REP",c:"Rockingham",d:"Dist 44",e:"Terry.Roy@leg.state.nh.us"},
+  {n:"Matt Sabourin dit Choinière",p:"DEM",c:"Rockingham",d:"Dist 44",e:null},
+  {n:"Santos Salvi",p:"REP",c:"Rockingham",d:"Dist 45",e:null},
+  {n:"George Grant",p:"REP",c:"Rockingham",d:"Dist 45",e:null},
+  {n:"Jessica Grill",p:"DEM",c:"Rockingham",d:"Dist 46",e:"Jessica.Grill@leg.state.nh.us"},
+  {n:"Stephanie Grund",p:"REP",c:"Rockingham",d:"Dist 46",e:null},
+  {n:"Mark Pearson",p:"REP",c:"Rockingham",d:"Dist 47",e:"Mark.Pearson@leg.state.nh.us"},
+  {n:"Stephen Pearson",p:"REP",c:"Rockingham",d:"Dist 47",e:"Steve.Pearson@leg.state.nh.us"},
+  {n:"Wayne Pearson",p:"REP",c:"Rockingham",d:"Dist 48",e:null},
+  {n:"Raymond Peeples",p:"REP",c:"Rockingham",d:"Dist 48",e:null},
+  {n:"Marc Plamondon",p:"REP",c:"Rockingham",d:"Dist 49",e:"marc.plamondon@leg.state.nh.us"},
+  {n:"Mark Proulx",p:"REP",c:"Rockingham",d:"Dist 49",e:"Mark.Proulx@leg.state.nh.us"},
+  {n:"Andrew Prout",p:"REP",c:"Rockingham",d:"Dist 50",e:"Andrew.Prout@leg.state.nh.us"},
+  {n:"Katherine Prudhomme-O'Brien",p:"REP",c:"Rockingham",d:"Dist 50",e:"kpo@leg.state.nh.us"},
+  {n:"James Qualey",p:"REP",c:"Rockingham",d:"Dist 51",e:"Jim.Qualey@leg.state.nh.us"},
+  {n:"Ned Raynolds",p:"DEM",c:"Rockingham",d:"Dist 51",e:"Ned.Raynolds@leg.state.nh.us"},
+  {n:"Ellen Rockmore",p:"DEM",c:"Rockingham",d:"Dist 52",e:"ellen4nh@gmail.com"},
+  {n:"Kim Rice",p:"DEM",c:"Rockingham",d:"Dist 52",e:"Kimberly.Rice@leg.state.nh.us"},
+  {n:"Erica Layon",p:"REP",c:"Rockingham",d:"Dist 53",e:"Erica.Layon@leg.state.nh.us"},
+  {n:"Adam Presa",p:"REP",c:"Rockingham",d:"Dist 53",e:null},
+  {n:"Jason Osborne",p:"REP",c:"Rockingham",d:"Dist 54",e:"Jason@Osborne4NH.com"},
+  {n:"Matthew Pitaro",p:"REP",c:"Rockingham",d:"Dist 54",e:null},
+  {n:"Louis Juris",p:"REP",c:"Rockingham",d:"Dist 55",e:"Louis.Juris@leg.state.nh.us"},
+  {n:"Seth King",p:"REP",c:"Rockingham",d:"Dist 55",e:"Seth.King@leg.state.nh.us"},
+  // STRAFFORD COUNTY
+  {n:"Efstathia Booras",p:"DEM",c:"Strafford",d:"Dist 1",e:"Efstathia.Booras@leg.state.nh.us"},
+  {n:"Marie Louise Bjelobrk",p:"DEM",c:"Strafford",d:"Dist 2",e:null},
+  {n:"Riché Colcombe",p:"DEM",c:"Strafford",d:"Dist 3",e:"Riche.Colcombe@leg.state.nh.us"},
+  {n:"Diane Pauer",p:"DEM",c:"Strafford",d:"Dist 8",e:"Diane.Pauer@leg.state.nh.us"},
+  {n:"Lex Berezhny",p:"REP",c:"Strafford",d:"Dist 7",e:"lex@berezhny.com"},
+  {n:"Joseph Barton",p:"REP",c:"Strafford",d:"Dist 7",e:null},
+  // SULLIVAN COUNTY
+  {n:"Joanna Brown",p:"REP",c:"Sullivan",d:"Dist 2",e:null},
+  {n:"Gabe Chapdelaine",p:"REP",c:"Sullivan",d:"Dist 3",e:null},
+].filter((r,i,a)=>a.findIndex(x=>x.n===r.n)===i);
+
+
+// ── PIXEL AVATAR GENERATOR ───────────────────────────────────────────────────
+function generatePixelAvatar(name, party) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 16; canvas.height = 16;
+  const ctx = canvas.getContext('2d');
+
+  // Seed from name
+  let seed = 0;
+  for (let i = 0; i < name.length; i++) seed = (seed * 31 + name.charCodeAt(i)) & 0xffffffff;
+  const rng = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
+
+  const colors = {
+    REP: ['#e53935','#c62828','#ff8a80','#fff','#ffcdd2','#b71c1c','#4a1515'],
+    DEM: ['#1e88e5','#1565c0','#90caf9','#fff','#bbdefb','#0d47a1','#0a1f3d'],
+    IND: ['#ab47bc','#7b1fa2','#ce93d8','#fff','#e1bee7','#4a148c','#1e0530'],
+  };
+  const pal = colors[party] || colors.IND;
+
+  // Draw a simple 16x16 character (mirrored for symmetry)
+  const pixels = [];
+  for (let y = 0; y < 16; y++) {
+    pixels[y] = [];
+    for (let x = 0; x < 8; x++) {
+      pixels[y][x] = Math.floor(rng() * pal.length);
+    }
+  }
+
+  // Override head and body areas with structure
+  // Head: rows 2-6, cols 3-5
+  for (let y = 2; y <= 5; y++) for (let x = 3; x <= 5; x++) pixels[y][x] = Math.floor(rng() * 2) + 2;
+  // Eyes
+  pixels[3][4] = 3; pixels[3][3] = 3;
+  // Body: rows 7-11
+  for (let y = 7; y <= 11; y++) for (let x = 2; x <= 6; x++) pixels[y][x] = Math.floor(rng() * 2);
+  // Legs
+  for (let y = 12; y <= 15; y++) { pixels[y][3] = 0; pixels[y][4] = 6; }
+
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 8; x++) {
+      ctx.fillStyle = pal[pixels[y][x]];
+      ctx.fillRect(x, y, 1, 1);
+      ctx.fillRect(15 - x, y, 1, 1);
+    }
+  }
+
+  return canvas;
+}
+
+// ── STATS GENERATOR ──────────────────────────────────────────────────────────
+function getStats(name, party) {
+  let seed = 0;
+  for (let c of name) seed = (seed * 31 + c.charCodeAt(0)) & 0xffffffff;
+  const rng = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
+  const base = () => Math.floor(rng() * 60) + 30;
+  return [
+    { label: 'Debate', val: base() },
+    { label: 'Sponsor', val: base() },
+    { label: 'Attend', val: base() },
+    { label: 'Lobby', val: base() },
+  ];
+}
+
+function getMove(name, party) {
+  let seed = 0;
+  for (let c of name) seed = (seed * 17 + c.charCodeAt(0)) & 0xffffffff;
+  const rng = () => { seed ^= (seed << 13); seed ^= (seed >> 17); seed ^= (seed << 5); return (seed >>> 0) / 0xffffffff; };
+
+  const moves = {
+    REP: [
+      {name:"FISCAL CUT", desc:"Reduces government spending by 2 stages."},
+      {name:"TAX RELIEF", desc:"Boosts constituent HP with a targeted cut."},
+      {name:"FREE MARKET", desc:"Deregulation attack hits all agencies at once."},
+      {name:"BORDER WALL", desc:"Raises a barrier that prevents status effects."},
+      {name:"SECOND AMEND.", desc:"Critical hit move with high variance."},
+    ],
+    DEM: [
+      {name:"SOCIAL SAFETY NET", desc:"Restores HP to all allies in the district."},
+      {name:"GREEN NEW DEAL", desc:"Charges a solar-powered blast over 2 turns."},
+      {name:"HEALTHCARE ACCESS", desc:"Removes one negative status from the team."},
+      {name:"UNION STRIKE", desc:"Collective power — grows stronger in groups."},
+      {name:"EQUITY SHIELD", desc:"Absorbs the next super-effective attack."},
+    ],
+    IND: [
+      {name:"WILDCARD", desc:"Effect changes every session. Unpredictable!"},
+      {name:"CROSSOVER VOTE", desc:"Can be used with either party's moves."},
+    ],
+  };
+  const pool = moves[party] || moves.IND;
+  return pool[Math.floor(rng() * pool.length)];
+}
+
+function getRarity(name) {
+  let h = 0;
+  for (let c of name) h = (h * 31 + c.charCodeAt(0)) & 0xffffffff;
+  const r = (h >>> 0) % 100;
+  if (r < 5) return '★★★';
+  if (r < 25) return '★★';
+  return '★';
+}
+
+// ── AI VOTING FETCH ───────────────────────────────────────────────────────────
+const voteCache = {};
+
+async function fetchVotingProfile(rep) {
+  const key = rep.n;
+  if (voteCache[key]) return voteCache[key];
+
+  const partyLabel = rep.p === 'REP' ? 'Republican' : rep.p === 'DEM' ? 'Democrat' : 'Independent';
+  const prompt = `You are generating a fun, Pokémon card-style fictional voting history for a New Hampshire state representative. Generate 4 mock legislative votes for ${rep.n}, a ${partyLabel} from ${rep.c} County (${rep.d}).
+
+Each vote should feel realistic for a NH state rep of this party. Use actual NH policy areas like: property taxes, school vouchers, gun rights, Medicaid expansion, renewable energy, zoning, opioid treatment, minimum wage, etc.
+
+Respond ONLY with a valid JSON array of exactly 4 objects. No preamble, no markdown. Each object must have:
+- "bill": short bill code like "HB 1234"
+- "topic": 3-5 word topic name in ALL CAPS
+- "vote": either "YEA" or "NAY"
+- "desc": one sentence (max 12 words) describing what the bill does
+
+Example: [{"bill":"HB 101","topic":"SCHOOL CHOICE VOUCHERS","vote":"YEA","desc":"Allows public funds to pay for private school tuition."}]`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 1000,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+
+  const data = await response.json();
+  const raw = data.content.map(b => b.text || '').join('');
+  const clean = raw.replace(/```json|```/g, '').trim();
+  const parsed = JSON.parse(clean);
+  voteCache[key] = parsed;
+  return parsed;
+}
+
+// ── WIKIPEDIA PHOTO FETCH ─────────────────────────────────────────────────────
+const photoCache = {};
+
+async function fetchWikiPhoto(name) {
+  if (photoCache[name] !== undefined) return photoCache[name];
+  photoCache[name] = null; // mark as attempted
+  try {
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name)}`;
+    const res = await fetch(url);
+    if (!res.ok) { return null; }
+    const data = await res.json();
+    const thumb = data?.thumbnail?.source || data?.originalimage?.source || null;
+    photoCache[name] = thumb;
+    return thumb;
+  } catch { return null; }
+}
+
+// Pre-fetch photos for the current page quietly in background
+function prefetchPhotos(reps) {
+  reps.forEach(r => {
+    if (photoCache[r.n] === undefined) fetchWikiPhoto(r.n);
+  });
+}
+
+
+function buildCard(rep, index) {
+  const scene = document.createElement('div');
+  scene.className = 'card-scene';
+  scene.style.animation = `cardIn 0.4s ease ${(index % PER_PAGE) * 0.04}s backwards`;
+
+  const stats = getStats(rep.n, rep.p);
+  const move = getMove(rep.n, rep.p);
+  const rarity = getRarity(rep.n);
+  const totalHP = 40 + stats.reduce((a,b)=>a+b.val,0) / 4 | 0;
+  const avatar = generatePixelAvatar(rep.n, rep.p);
+  const partyLabel = rep.p === 'REP' ? 'Republican' : rep.p === 'DEM' ? 'Democrat' : 'Independent';
+  const recordsUrl = `https://gc.nh.gov/bill_Status/byAnyMember.aspx?member=${encodeURIComponent(rep.n)}&SessionYear=2025&list=1`;
+
+  scene.innerHTML = `
+    <div class="card-flipper" id="flipper-${index}">
+      <!-- FRONT -->
+      <div class="card-face card-front rep-card ${rep.p}">
+        <div class="card-inner">
+          <div class="card-header">
+            <div class="card-name">${rep.n}</div>
+            <div class="card-hp"><span>${totalHP}</span> HP</div>
+          </div>
+          <div class="card-art" id="art-${index}">
+            <div class="photo-fallback" id="fallback-${index}">
+              <div class="pixel-avatar" id="av-${index}"></div>
+            </div>
+            <div class="district-badge">${rep.d}</div>
+          </div>
+          <div class="type-row">
+            <span class="type-badge">${partyLabel}</span>
+            <span class="type-badge county">${rep.c} Co.</span>
+          </div>
+          <div class="card-divider"></div>
+          <div class="card-stats">
+            ${stats.map(s => `
+              <div class="stat-row">
+                <div class="stat-label">${s.label}</div>
+                <div class="stat-bar-wrap">
+                  <div class="stat-bar"><div class="stat-bar-fill" style="width:${s.val}%"></div></div>
+                  <div class="stat-val">${s.val}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          <div class="card-move">
+            <div class="move-name">⚡ ${move.name}</div>
+            <div class="move-desc">${move.desc}</div>
+          </div>
+          <div class="card-footer">
+            <div class="card-id">#${String(index+1).padStart(3,'0')}</div>
+            <div class="rarity-stars">${rarity}</div>
+          </div>
+          <button class="flip-btn" id="flipbtn-${index}">📋 VIEW VOTING RECORD ▶</button>
+        </div>
+      </div>
+
+      <!-- BACK -->
+      <div class="card-face card-back rep-card ${rep.p}" style="--party-a:var(--party-a);--party-b:var(--party-b);">
+        <div class="back-inner" style="
+          --party-a: ${rep.p==='REP'?'#3a0a0a':rep.p==='DEM'?'#051232':'#1a0535'};
+          --party-b: ${rep.p==='REP'?'#0e0202':rep.p==='DEM'?'#010510':'#080215'};
+          --party-c: ${rep.p==='REP'?'#e53935':rep.p==='DEM'?'#1e88e5':'#ab47bc'};
+          --party-d: ${rep.p==='REP'?'#ff8a80':rep.p==='DEM'?'#90caf9':'#e1bee7'};
+        ">
+          <div class="back-header">
+            <div class="back-title">🗳 VOTING RECORD</div>
+            <button class="back-close" id="closebtn-${index}">✕ BACK</button>
+          </div>
+          <div class="back-title" style="font-size:8px;color:#aaa;font-family:'Exo 2',sans-serif;font-weight:700;">${rep.n}</div>
+          <div class="ai-disclaimer">⚠ AI-simulated votes for illustration. Not real legislative data.</div>
+          <div class="vote-list" id="votes-${index}">
+            <div class="back-loading">
+              <div class="back-loading-spinner" style="border-top-color:${rep.p==='REP'?'#e53935':rep.p==='DEM'?'#1e88e5':'#ab47bc'}"></div>
+              <div class="back-loading-text">LOADING...</div>
+            </div>
+          </div>
+          <div class="contact-row">
+            <span class="contact-icon">✉</span>
+            <div class="contact-info">
+              <div class="contact-label">EMAIL</div>
+              <div class="contact-value">${rep.e ? `<a href="mailto:${rep.e}">${rep.e}</a>` : '<span class="contact-na">N/A</span>'}</div>
+            </div>
+          </div>
+          <div class="contact-row">
+            <span class="contact-icon">🌐</span>
+            <div class="contact-info">
+              <div class="contact-label">WEBSITE</div>
+              <div class="contact-value">${rep.w ? `<a href="https://${rep.w}" target="_blank" rel="noopener">${rep.w}</a>` : '<span class="contact-na">N/A</span>'}</div>
+            </div>
+          </div>
+          <a class="records-link" href="${recordsUrl}" target="_blank" rel="noopener"
+            style="--party-c:${rep.p==='REP'?'#e53935':rep.p==='DEM'?'#1e88e5':'#ab47bc'}">
+            🔗 VIEW OFFICIAL NH RECORDS ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Attach canvas avatar
+  setTimeout(() => {
+    const slot = scene.querySelector(`#av-${index}`);
+    if (slot) slot.appendChild(avatar);
+  }, 0);
+
+  // Flip to back
+  scene.querySelector(`#flipbtn-${index}`).addEventListener('click', async () => {
+    const flipper = scene.querySelector(`#flipper-${index}`);
+    flipper.classList.add('flipped');
+
+    const voteSlot = scene.querySelector(`#votes-${index}`);
+    if (voteSlot.querySelector('.back-loading')) {
+      try {
+        const votes = await fetchVotingProfile(rep);
+        voteSlot.innerHTML = votes.map(v => {
+          const isYea = v.vote === 'YEA';
+          const col = isYea
+            ? (rep.p==='REP'?'#ef5350':rep.p==='DEM'?'#42a5f5':'#ce93d8')
+            : '#888';
+          return `
+            <div class="vote-item" style="--vote-color:${col}">
+              <div class="vote-item-top">
+                <span class="vote-bill">${v.bill} · ${v.topic}</span>
+                <span class="vote-badge" style="--vote-color:${col}">${v.vote}</span>
+              </div>
+              <div class="vote-desc">${v.desc}</div>
+            </div>
+          `;
+        }).join('');
+      } catch(e) {
+        voteSlot.innerHTML = `<div style="font-size:9px;color:#666;text-align:center;padding:20px;">Could not load votes.<br>Check your connection.</div>`;
+      }
+    }
+  });
+
+  // Flip back to front
+  scene.querySelector(`#closebtn-${index}`).addEventListener('click', () => {
+    scene.querySelector(`#flipper-${index}`).classList.remove('flipped');
+  });
+
+  // Attach pixel avatar as fallback
+  setTimeout(() => {
+    const slot = scene.querySelector(`#av-${index}`);
+    if (slot) slot.appendChild(avatar);
+  }, 0);
+
+  // Try Wikipedia photo — swap in over pixel art if found
+  fetchWikiPhoto(rep.n).then(photoUrl => {
+    if (!photoUrl) return;
+    const fallback = scene.querySelector(`#fallback-${index}`);
+    if (!fallback) return;
+    const img = document.createElement('img');
+    img.className = 'rep-photo';
+    img.alt = rep.n;
+    img.src = photoUrl;
+    img.onload = () => fallback.replaceWith(img);
+  });
+
+  return scene;
+}
+
+// ── PAGINATION & FILTERING ───────────────────────────────────────────────────
+const PER_PAGE = 30;
+let currentPage = 1;
+let currentFilter = 'ALL';
+let currentSearch = '';
+
+function getFiltered() {
+  return REPS.filter(r => {
+    const matchParty = currentFilter === 'ALL' || r.p === currentFilter;
+    const q = currentSearch.toLowerCase();
+    const matchSearch = !q || r.n.toLowerCase().includes(q) || r.c.toLowerCase().includes(q) || r.d.toLowerCase().includes(q);
+    return matchParty && matchSearch;
+  });
+}
+
+function render() {
+  const filtered = getFiltered();
+  const total = filtered.length;
+  const totalPages = Math.ceil(total / PER_PAGE);
+  if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+
+  const start = (currentPage - 1) * PER_PAGE;
+  const slice = filtered.slice(start, start + PER_PAGE);
+
+  const grid = document.getElementById('card-grid');
+  grid.innerHTML = '';
+
+  if (slice.length === 0) {
+    grid.innerHTML = '<div class="no-results">NO REPS FOUND<br><br>TRY A DIFFERENT SEARCH</div>';
+  } else {
+    slice.forEach((rep, i) => grid.appendChild(buildCard(rep, start + i)));
+    prefetchPhotos(slice);
+  }
+
+  renderPagination(totalPages, total);
+}
+
+function renderPagination(totalPages, total) {
+  const pg = document.getElementById('pagination');
+  if (totalPages <= 1) { pg.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" ${currentPage===1?'disabled':''} onclick="goPage(${currentPage-1})">◀ PREV</button>`;
+
+  const start = Math.max(1, currentPage - 2);
+  const end = Math.min(totalPages, currentPage + 2);
+  if (start > 1) html += `<button class="page-btn" onclick="goPage(1)">1</button>${start>2?'<span class="page-info">…</span>':''}`;
+  for (let p = start; p <= end; p++) {
+    html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  if (end < totalPages) html += `${end<totalPages-1?'<span class="page-info">…</span>':''}<button class="page-btn" onclick="goPage(${totalPages})">${totalPages}</button>`;
+
+  html += `<button class="page-btn" ${currentPage===totalPages?'disabled':''} onclick="goPage(${currentPage+1})">NEXT ▶</button>`;
+  html += `<div class="page-info">${total} reps</div>`;
+  pg.innerHTML = html;
+}
+
+window.goPage = (p) => { currentPage = p; render(); window.scrollTo({top:0,behavior:'smooth'}); };
+
+// Update counts
+const repCount = REPS.filter(r=>r.p==='REP').length;
+const demCount = REPS.filter(r=>r.p==='DEM').length;
+const indCount = REPS.filter(r=>r.p==='IND').length;
+document.getElementById('rep-count').textContent = repCount;
+document.getElementById('dem-count').textContent = demCount;
+document.getElementById('ind-count').textContent = indCount;
+
+// Column toggle
+document.querySelectorAll('.col-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const cols = parseInt(btn.dataset.cols);
+    document.documentElement.style.setProperty('--cols', cols);
+    document.querySelectorAll('.col-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    currentPage = 1;
+    render();
+  });
+});
+
+// Search
+let searchTimer;
+document.getElementById('search').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    currentSearch = e.target.value;
+    currentPage = 1;
+    render();
+  }, 200);
+});
+
+// Init
+window.addEventListener('load', () => {
+  render();
+  setTimeout(() => document.getElementById('loading').classList.add('hidden'), 600);
+});
+</script>
+</body>
+</html>
